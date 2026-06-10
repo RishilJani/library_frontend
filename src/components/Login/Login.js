@@ -1,18 +1,46 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Library, Mail, Lock } from 'lucide-react';
+import { useUser } from '../../context/UserContext';
 import './Login.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useUser();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate login
-    console.log('Login attempt:', { email, password });
-    navigate('/dashboard');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8080/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      console.log('Login API Result:', data);
+
+      if (!(data.error)) {
+        // Assuming the API returns a token or success status
+        login(data.data); // Setting user data from response.data
+        navigate('/dashboard');
+        console.log("response = ", data);
+      } else {
+        alert(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+      alert('An error occurred during login. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -64,8 +92,8 @@ const Login = () => {
             </div>
           </div>
 
-          <button type="submit" className="login-button">
-            Log In
+          <button type="submit" className="login-button" disabled={isLoading}>
+            {isLoading ? 'Logging In...' : 'Log In'}
           </button>
         </form>
 
