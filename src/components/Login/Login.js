@@ -25,19 +25,17 @@ const Login = () => {
       });
 
       const data = await response.json();
-      console.log('Login API Result:', data);
 
       if (!(data.error)) {
         // Assuming the API returns a token or success status
         login(data.data); // Setting user data from response.data
         navigate('/dashboard');
-        console.log("response = ", data);
       } else {
         alert(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login Error:', error);
-      alert('An error occurred during login. Please try again.');
+      alert('An error occurred during login. Request Timeout. Please try again.');
     } finally {
       setIsLoading(false);
     }

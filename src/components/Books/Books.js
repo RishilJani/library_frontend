@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown, ChevronUp, Hash, User as UserIcon, CheckCircle, XCircle, Info, Library } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Hash, User as UserIcon, CheckCircle, XCircle, Info, Library, Plus, Edit2 } from 'lucide-react';
+import BookModal from './BookModal';
 import Layout from '../Layout/Layout';
 import './Books.css';
 
@@ -9,23 +10,26 @@ const Books = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
+  const [selectedBook, setSelectedBook] = useState(null);
+
+  const fetchBooks = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/books');
+      if (!response.ok) {
+        throw new Error('Failed to fetch books');
+      }
+      const res = await response.json();
+      setBooks(res.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/books');
-        if (!response.ok) {
-          throw new Error('Failed to fetch books');
-        }
-        const res = await response.json();
-        setBooks(res.data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchBooks();
   }, []);
 
@@ -37,6 +41,44 @@ const Books = () => {
 
   const toggleAccordion = (bookId) => {
     setExpandedId(expandedId === bookId ? null : bookId);
+  };
+
+  const handleOpenAddModal = () => {
+    setModalMode('add');
+    setSelectedBook(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (e, book) => {
+    e.stopPropagation();
+    setModalMode('edit');
+    setSelectedBook(book);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveBook = async (bookData) => {
+    try {
+      const url = modalMode === 'add'
+        ? 'http://localhost:8080/books'
+        : `http://localhost:8080/books/${bookData.bookId}`;
+      const method = modalMode === 'add' ? 'POST' : 'PUT';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookData)
+      });
+
+      if (response.ok) {
+        setIsModalOpen(false);
+        fetchBooks();
+      } else {
+        alert(`Failed to ${modalMode} book`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Error ${modalMode}ing book`);
+    }
   };
 
   if (isLoading) {
@@ -70,7 +112,12 @@ const Books = () => {
     <Layout>
       <header className="books-header">
         <div className='left-header'>
-          <h1 className="page-title">Book Catalog</h1>
+          <div className='header-top'>
+            <h1 className="page-title">Book Catalog</h1>
+            <button className="add-book-btn" onClick={handleOpenAddModal}>
+              <Plus size={18} /> Add Book
+            </button>
+          </div>
           <p className="page-subtitle">Manage and explore library inventory</p>
         </div>
 
@@ -103,6 +150,9 @@ const Books = () => {
                 </div>
               </div>
               <div className="accordion-controls">
+                <button className="edit-btn" onClick={(e) => handleOpenEditModal(e, book)}>
+                  <Edit2 size={18} />
+                </button>
                 <span className="copies-count">{book.bookCopies ? book.bookCopies.length : 0} Copies</span>
                 {expandedId === book.bookId ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               </div>
@@ -161,6 +211,13 @@ const Books = () => {
           </div>
         )}
       </div>
+      <BookModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveBook}
+        initialData={selectedBook}
+        mode={modalMode}
+      />
     </Layout>
   );
 };
